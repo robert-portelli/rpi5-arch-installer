@@ -12,7 +12,7 @@ jobs:
   setup-test-env-and-test-bats-common-setup:
     runs-on: ubuntu-latest
     container:
-      image: robertportelli/test-readiluks:latest
+      image: robertportelli/test-${{ github.event.repository.name }}:latest
     steps:
       - name: Check out Code
         uses: actions/checkout@v4
