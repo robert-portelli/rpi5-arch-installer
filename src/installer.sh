@@ -53,13 +53,13 @@ mkfs.vfat -F 32 -n ESP "/dev/disk/by-partuuid/$ESP_UUID"
 
 
 # Ensure root mountpoint exists on host
-install -d "$ROOT_MNT"
+install -d -v -m 0755 -o root -g root "$ROOT_MNT"
 
 # Mount root (by PARTUUID)
 mountpoint -q "$ROOT_MNT" || mount "/dev/disk/by-partuuid/$ROOT_UUID" "$ROOT_MNT"
 
 # Create ESP mountpoint inside the mounted root
-install -d "$ROOT_MNT/boot"
+install -d -v -m 0755 -o root -g root "$ROOT_MNT/boot"
 
 # Mount ESP (by PARTUUID)
 mountpoint -q "$ESP_MNT" || mount "/dev/disk/by-partuuid/$ESP_UUID" "$ESP_MNT"
@@ -78,9 +78,11 @@ pacman-key --recv-keys --keyserver hkps://keyserver.ubuntu.com "$ALARM_KEY" \
 # verify and locally trust
 pacman-key --finger "$ALARM_KEY" | sed -n '2p'
 pacman-key --lsign-key "$ALARM_KEY"
+# ---
 
-# Host: mirrorlist for ALARM
-install -D -m0644 /dev/null /etc/pacman.d/arm-mirrorlist
+# --- Host: mirrorlist and conf for ALARM
+#install -D -m0644 /dev/null /etc/pacman.d/arm-mirrorlist
+#install -D -T -v -m 0644 -o root -g root /dev/null /etc/pacman.d/arm-mirrorlist
 cat >/etc/pacman.d/arm-mirrorlist <<'EOF'
 Server = http://fl.us.mirror.archlinuxarm.org/$arch/$repo
 EOF
@@ -98,6 +100,7 @@ Include = /etc/pacman.d/arm-mirrorlist
 [alarm]
 Include = /etc/pacman.d/arm-mirrorlist
 EOF
+# ---
 
 # Optional sanity check probe (keeps host db clean)
 rm -rf /tmp/pdb && install -d /tmp/pdb
@@ -111,8 +114,8 @@ pacstrap -C /tmp/pacman.arm.conf -GMK "$ROOT_MNT" base archlinuxarm-keyring || e
 arch-chroot "$ROOT_MNT" pacman-conf Architecture | grep -qx aarch64 || { echo "target pacman.conf not aarch64"; exit 1; }
 
 # Target: persist config
-install -D -m0644 /etc/pacman.d/arm-mirrorlist "$ROOT_MNT/etc/pacman.d/arm-mirrorlist"
-install -D -m0644 /tmp/pacman.arm.conf "$ROOT_MNT/etc/pacman.conf"
+install -D -T -v -m 0644 -o root -g root /etc/pacman.d/arm-mirrorlist "$ROOT_MNT/etc/pacman.d/arm-mirrorlist"
+install -D -T -v -m 0644 -o root -g root /tmp/pacman.arm.conf "$ROOT_MNT/etc/pacman.conf"
 
 # seed the keyring:
 arch-chroot "$ROOT_MNT" pacman-key --init
@@ -245,6 +248,23 @@ systemd-firstboot \
   --hostname="$HOSTNAME" \
   --setup-machine-id \
   --delete-root-password --force # for boot testing only
+
+# Host: generate the target's fstab
+genfstab -U "$ROOT_MNT" > "$ROOT_MNT/etc/fstab"
+
+####### level 2
+arch-chroot "$MNT_ROOT" /usr/bin/env bash -eux <<'EOF'
+pacman -S --noconfirm ufw
+
+# enable sshd; ufw will be applied at next boot
+systemctl enable sshd ufw.service
+
+# define ufw policy and rules; safe even while ufw is disabled
+ufw default deny incoming
+ufw default allow outgoing
+ufw limit ssh
+ufw enable
+EOF
 
 # Finish
 sync
