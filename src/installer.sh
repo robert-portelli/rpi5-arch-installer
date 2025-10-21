@@ -79,6 +79,11 @@ pacman-key --recv-keys --keyserver hkps://keyserver.ubuntu.com "$ALARM_KEY" \
 pacman-key --finger "$ALARM_KEY" | sed -n '2p'
 pacman-key --lsign-key "$ALARM_KEY"
 
+# Host emulation for ARM chroots
+# provides qemu-aarch64-static and binfmt rules
+pacman -S --quiet --noconfirm --needed qemu-user-static qemu-user-static-binfmt
+#pacman -Sy --quiet --noconfirm --needed qemu-user-static qemu-user-static-binfmt
+
 # Host: mirrorlist for ALARM
 install -D -m0644 /dev/null /etc/pacman.d/arm-mirrorlist
 cat >/etc/pacman.d/arm-mirrorlist <<'EOF'
@@ -153,6 +158,22 @@ sed -i 's|^HOOKS=.*|HOOKS=(base udev autodetect modconf block filesystems)|' \
 # Note: Uses the target's pacman
 arch-chroot "$ROOT_MNT" pacman -S --quiet --noconfirm linux-rpi-16k rpi5-eeprom \
     firmware-raspberrypi btrfs-progs
+
+# --- Copy the emulator into target for chroot if host register qemu without F, or with a non-static interpreter, or with binfmt disabled
+# precheck: ensure emulator exists on host
+command -v /usr/bin/qemu-aarch64-static >/dev/null || {
+  echo "qemu-aarch64-static missing"; exit 1
+}
+
+# probe; if chroot can't exec aarch64, inject emulator
+if ! chroot "$ROOT_MNT" /usr/bin/uname -m >/dev/null 2>&1; then
+  install -D /usr/bin/qemu-aarch64-static "$ROOT_MNT/usr/bin/qemu-aarch64-static"
+  # verify
+  chroot "$ROOT_MNT" /usr/bin/uname -m | grep -qx aarch64 || {
+    echo "aarch64 emulation still unavailable"; exit 1
+  }
+fi
+# ---
 
 # Save a copy of the vendor config.txt
 if [ ! -f "$ESP_MNT/config.txt" ]; then
