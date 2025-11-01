@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Inputs
-: "${DISK:=/dev/sdb}"        # override: DISK=/dev/sda ./installer.sh
+: "${DISK:=/dev/<>}"        # override: DISK=/dev/sda ./installer.sh
 : "${HOSTNAME:=arch}"
 : "${LOCALE:=en_US.UTF-8}"
 : "${KEYMAP:=us}"
@@ -45,6 +45,7 @@ systemd-repart \
     --empty=force\
     "$DISK"
 
+partprobe "$DISK"
 udevadm settle --exit-if-exists="/dev/disk/by-partuuid/$ESP_UUID"
 udevadm settle --exit-if-exists="/dev/disk/by-partuuid/$ROOT_UUID"
 
@@ -56,13 +57,15 @@ mkfs.vfat -F 32 -n ESP "/dev/disk/by-partuuid/$ESP_UUID"
 install -d "$ROOT_MNT"
 
 # Mount root (by PARTUUID)
-mountpoint -q "$ROOT_MNT" || mount "/dev/disk/by-partuuid/$ROOT_UUID" "$ROOT_MNT"
+mountpoint -q "$ROOT_MNT" || { echo "ERROR: Mountpoint '$ROOT_MNT' not found" >&2; exit 1; }
+mount "/dev/disk/by-partuuid/$ROOT_UUID" "$ROOT_MNT" || { echo "ERROR: ROOT UUID '$ROOT_UUID' not mounted to $ROOT_MNT" >&2; exit 1; }
 
 # Create ESP mountpoint inside the mounted root
 install -d "$ROOT_MNT/boot"
 
 # Mount ESP (by PARTUUID)
-mountpoint -q "$ESP_MNT" || mount "/dev/disk/by-partuuid/$ESP_UUID" "$ESP_MNT"
+mountpoint -q "$ESP_MNT" || { echo "ERROR: Mountpoint '$ESP_MNT' not found" >&2; exit 1; }
+mount "/dev/disk/by-partuuid/$ESP_UUID" "$ESP_MNT" || { echo "ERROR: ESP UUID '$ESP_UUID' not mounted to $ROOT_MNT" >&2; exit 1; }
 
 # --- Import Arch Linux ARM builder key on the LIVE ISO (host pacman) ---
 pacman -Sy --quiet --noconfirm --needed gnupg archlinux-keyring
