@@ -6,7 +6,7 @@ readonly BASE_DIR
 echo "$BASE_DIR"
 
 main() {
-    source  "$BASE_DIR/src/config.sh"
+    source  "$BASE_DIR/src/lib/_config.bash"
 
     # Layout declarations
     rm -rf /run/repart.d
