@@ -6,20 +6,7 @@ readonly BASE_DIR
 echo "$BASE_DIR"
 
 main() {
-    # Inputs
-    : "${DISK:=/dev/<>}"        # override: DISK=/dev/sda ./installer.sh
-    : "${HOSTNAME:=arch}"
-    : "${LOCALE:=en_US.UTF-8}"
-    : "${KEYMAP:=us}"
-    : "${TZ:=UTC}"
-    : "${ESP_UUID:=$(uuidgen --random)}"
-    : "${ROOT_UUID:=$(uuidgen --random)}"
-    : "${ESP_MNT:=/mnt/boot}"
-    : "${ROOT_MNT:=/mnt}"
-    : "${EMPTY:=require}"
-
-    [ -b "$DISK" ] || { echo "ERROR: DISK '$DISK' not found" >&2; exit 1; }
-
+    source  "$BASE_DIR/src/config.sh"
 
     # Layout declarations
     rm -rf /run/repart.d
