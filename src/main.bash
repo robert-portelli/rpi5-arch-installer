@@ -16,7 +16,7 @@ main() {
 [Partition]
 Type=esp
 Label=ESP
-UUID=${ESP_UUID}
+UUID=${config[ESP_UUID]}
 SizeMinBytes=1G
 SizeMaxBytes=1G
 Minimize=off
@@ -26,7 +26,7 @@ EOF
 [Partition]
 Type=root-arm64
 Label=root
-UUID=${ROOT_UUID}
+UUID=${config[ROOT_UUID]}
 Format=btrfs
 EOF
 
@@ -35,33 +35,33 @@ EOF
         --pretty=yes \
         --definitions=/run/repart.d \
         --dry-run=no \
-        --empty="$EMPTY"\
-        "$DISK"
+        --empty="${config[EMPTY]}"\
+        "${config[DISK]}"
 
-    partprobe "$DISK"
-    udevadm settle --exit-if-exists="/dev/disk/by-partuuid/$ESP_UUID"
-    udevadm settle --exit-if-exists="/dev/disk/by-partuuid/$ROOT_UUID"
+    partprobe "${config[DISK]}"
+    udevadm settle --exit-if-exists="/dev/disk/by-partuuid/${config[ESP_UUID]}"
+    udevadm settle --exit-if-exists="/dev/disk/by-partuuid/${config[ROOT_UUID]}"
 
     # format the esp
-    mkfs.vfat -F 32 -n ESP "/dev/disk/by-partuuid/$ESP_UUID"
+    mkfs.vfat -F 32 -n ESP "/dev/disk/by-partuuid/${config[ESP_UUID]}"
 
 
     # Ensure root mountpoint exists on host
-    install -d "$ROOT_MNT"
+    install -d "${config[ROOT_MNT]}"
 
     # Mount root (by PARTUUID)
-    if ! mountpoint -q "$ROOT_MNT"; then
-        mount "/dev/disk/by-partuuid/$ROOT_UUID" "$ROOT_MNT" \
-        || { echo "ERROR: ROOT UUID '$ROOT_UUID' not mounted to $ROOT_MNT" >&2; exit 1; }
+    if ! mountpoint -q "${config[ROOT_MNT]}"; then
+        mount "/dev/disk/by-partuuid/${config[ROOT_UUID]}" "${config[ROOT_MNT]}" \
+        || { echo "ERROR: ROOT UUID '${config[ROOT_UUID]}' not mounted to ${config[ROOT_MNT]}" >&2; exit 1; }
     fi
 
     # Create ESP mountpoint inside the mounted root
-    install -d "$ROOT_MNT/boot"
+    install -d "${config[ROOT_MNT]}/boot"
 
     # Mount ESP (by PARTUUID)
-    if ! mountpoint -q "$ESP_MNT"; then
-        mount "/dev/disk/by-partuuid/$ESP_UUID" "$ESP_MNT"\
-        || { echo "ERROR: ESP UUID '$ESP_UUID' not mounted to $ROOT_MNT" >&2; exit 1; }
+    if ! mountpoint -q "${config[ESP_MNT]}"; then
+        mount "/dev/disk/by-partuuid/${config[ESP_UUID]}" "${config[ESP_MNT]}"\
+        || { echo "ERROR: ESP UUID '${config[ESP_UUID]}' not mounted to ${config[ESP_MNT]}" >&2; exit 1; }
     fi
 
     # --- Import Arch Linux ARM builder key on the LIVE ISO (host pacman) ---
@@ -110,53 +110,53 @@ EOF
     pacman -Sp base --config /tmp/pacman.arm.conf --dbpath /tmp/pdb >/dev/null || exit 1
 
     # install to target (creates a new, empty keyring via -K)
-    pacstrap -C /tmp/pacman.arm.conf -GMK "$ROOT_MNT" base archlinuxarm-keyring || exit 1
+    pacstrap -C /tmp/pacman.arm.conf -GMK "${config[ROOT_MNT]}" base archlinuxarm-keyring || exit 1
 
     # sanity check:
-    arch-chroot "$ROOT_MNT" pacman-conf Architecture | grep -qx aarch64 || { echo "target pacman.conf not aarch64"; exit 1; }
+    arch-chroot "${config[ROOT_MNT]}" pacman-conf Architecture | grep -qx aarch64 || { echo "target pacman.conf not aarch64"; exit 1; }
 
     # Target: persist config
-    install -D -m0644 /etc/pacman.d/arm-mirrorlist "$ROOT_MNT/etc/pacman.d/arm-mirrorlist"
-    install -D -m0644 /tmp/pacman.arm.conf "$ROOT_MNT/etc/pacman.conf"
+    install -D -m0644 /etc/pacman.d/arm-mirrorlist "${config[ROOT_MNT]}/etc/pacman.d/arm-mirrorlist"
+    install -D -m0644 /tmp/pacman.arm.conf "${config[ROOT_MNT]}/etc/pacman.conf"
 
     # seed the keyring:
-    arch-chroot "$ROOT_MNT" pacman-key --init
-    arch-chroot "$ROOT_MNT" pacman-key --populate archlinuxarm
+    arch-chroot "${config[ROOT_MNT]}" pacman-key --init
+    arch-chroot "${config[ROOT_MNT]}" pacman-key --populate archlinuxarm
 
     # sanity checks
-    arch-chroot "$ROOT_MNT" pacman-conf Architecture | grep -qx aarch64 \
+    arch-chroot "${config[ROOT_MNT]}" pacman-conf Architecture | grep -qx aarch64 \
       || { echo "ERROR: pacman Architecture != aarch64"; exit 1; }
 
-    arch-chroot "$ROOT_MNT" file -Lb /bin/bash | grep -q aarch64 \
+    arch-chroot "${config[ROOT_MNT]}" file -Lb /bin/bash | grep -q aarch64 \
       || { echo "ERROR: /bin/bash is not aarch64"; exit 1; }
 
     # avoid creating the initramfs twice, install mkinitcpio and edit conf before kernel install
     # (once via kernel post install hook and once with edited mkinitcpio.conf)
-    arch-chroot "$ROOT_MNT" pacman -S --quiet --noconfirm mkinitcpio
+    arch-chroot "${config[ROOT_MNT]}" pacman -S --quiet --noconfirm mkinitcpio
 
     # save a copy of the original mkinitcpio.conf
-    if [ ! -f "$ROOT_MNT/etc/mkinitcpio.conf" ]; then
-        { echo "ERROR: $ROOT_MNT/etc lacks mkinitcpio.conf"; exit 1; }
+    if [ ! -f "${config[ROOT_MNT]}/etc/mkinitcpio.conf" ]; then
+        { echo "ERROR: ${config[ROOT_MNT]}/etc lacks mkinitcpio.conf"; exit 1; }
     else
-        cp -a -- "$ROOT_MNT/etc/mkinitcpio.conf" "$ESP_MNT/bak_original_mkinitcpio.conf"
+        cp -a -- "${config[ROOT_MNT]}/etc/mkinitcpio.conf" "${config[ESP_MNT]}/bak_original_mkinitcpio.conf"
     fi
 
     # set a console font
-    echo "KEYMAP=us" > "$ROOT_MNT/etc/vconsole.conf"
+    echo "KEYMAP=us" > "${config[ROOT_MNT]}/etc/vconsole.conf"
 
     # set the FILES in mkinitcpio.conf
-    sed -i 's|^FILES=.*|FILES=(/etc/vconsole.conf)|' "$ROOT_MNT/etc/mkinitcpio.conf"
+    sed -i 's|^FILES=.*|FILES=(/etc/vconsole.conf)|' "${config[ROOT_MNT]}/etc/mkinitcpio.conf"
 
     # set the HOOKS in mkinitcpio.conf
     # this is for proving boot, later transition to headless hooks
     sed -i 's|^HOOKS=.*|HOOKS=(base udev autodetect modconf block filesystems)|' \
-      "$ROOT_MNT/etc/mkinitcpio.conf"
+      "${config[ROOT_MNT]}/etc/mkinitcpio.conf"
     ## this is a documentation for the future headless HOOKS:
     ## HOOKS=(base udev autodetect modconf block filesystems)
 
     # Target: kernel + firmware
     # Note: Uses the target's pacman
-    arch-chroot "$ROOT_MNT" pacman -S --quiet --noconfirm linux-rpi-16k rpi5-eeprom \
+    arch-chroot "${config[ROOT_MNT]}" pacman -S --quiet --noconfirm linux-rpi-16k rpi5-eeprom \
         firmware-raspberrypi btrfs-progs
 
     # --- Copy the emulator into target for chroot if host register qemu without F, or with a non-static interpreter, or with binfmt disabled
@@ -166,28 +166,28 @@ EOF
     }
 
     # probe; if chroot can't exec aarch64, inject emulator
-    if ! chroot "$ROOT_MNT" /usr/bin/uname -m >/dev/null 2>&1; then
-      install -D /usr/bin/qemu-aarch64-static "$ROOT_MNT/usr/bin/qemu-aarch64-static"
+    if ! chroot "${config[ROOT_MNT]}" /usr/bin/uname -m >/dev/null 2>&1; then
+      install -D /usr/bin/qemu-aarch64-static "${config[ROOT_MNT]}/usr/bin/qemu-aarch64-static"
       # verify
-      chroot "$ROOT_MNT" /usr/bin/uname -m | grep -qx aarch64 || {
+      chroot "${config[ROOT_MNT]}" /usr/bin/uname -m | grep -qx aarch64 || {
         echo "aarch64 emulation still unavailable"; exit 1
       }
     fi
     # ---
 
     # Save a copy of the vendor config.txt
-    if [ ! -f "$ESP_MNT/config.txt" ]; then
-        { echo "ERROR: $ESP_MNT lacks vendor config.txt"; exit 1; }
+    if [ ! -f "${config[ESP_MNT]}/config.txt" ]; then
+        { echo "ERROR: ${config[ESP_MNT]} lacks vendor config.txt"; exit 1; }
     else
-        cp -a -- "$ESP_MNT/config.txt" "$ESP_MNT/bak_vendor_config.txt"
+        cp -a -- "${config[ESP_MNT]}/config.txt" "${config[ESP_MNT]}/bak_vendor_config.txt"
     fi
 
     # Overwrite vendor config.txt with settings for headless server
-    KERNEL_NAME=$(arch-chroot "$ROOT_MNT" bash -lc 'cd /boot 2>/dev/null; [ -f Image ] && echo Image || { [ -f kernel8.img ] && echo kernel8.img; }')
+    KERNEL_NAME=$(arch-chroot "${config[ROOT_MNT]}" bash -lc 'cd /boot 2>/dev/null; [ -f Image ] && echo Image || { [ -f kernel8.img ] && echo kernel8.img; }')
     : "${KERNEL_NAME:=kernel8.img}"
 
     # this is the headless server we will build towards, here for documentation
-    cat >"$ESP_MNT"/future_config.txt <<EOF
+    cat >"${config[ESP_MNT]}"/future_config.txt <<EOF
 arm_64bit=1
 kernel=$KERNEL_NAME
 initramfs initramfs-linux.img followkernel
@@ -214,7 +214,7 @@ dtparam=uart0=off
 EOF
 
     # this is the config to prove boot and increment towards headless server
-    cat >"$ESP_MNT"/config.txt <<EOF
+    cat >"${config[ESP_MNT]}"/config.txt <<EOF
 arm_64bit=1
 kernel=$KERNEL_NAME
 initramfs initramfs-linux.img followkernel
@@ -241,29 +241,29 @@ dtparam=uart0=off
 EOF
 
     # save a copy of the vendor cmdline.txt
-    if [ ! -f "$ESP_MNT/cmdline.txt" ]; then
-        { echo "ERROR: $ESP_MNT lacks vendor cmdline.txt"; exit 1; }
+    if [ ! -f "${config[ESP_MNT]}/cmdline.txt" ]; then
+        { echo "ERROR: ${config[ESP_MNT]} lacks vendor cmdline.txt"; exit 1; }
     else
-        cp -a -- "$ESP_MNT/cmdline.txt" "$ESP_MNT/bak_vendor_cmdline.txt"
+        cp -a -- "${config[ESP_MNT]}/cmdline.txt" "${config[ESP_MNT]}/bak_vendor_cmdline.txt"
     fi
 
     # Bootstrap cmdline
-    cat >"$ESP_MNT"/cmdline.txt <<EOF
-root=PARTUUID=$ROOT_UUID rw rootwait rootfstype=btrfs console=tty1
+    cat >"${config[ESP_MNT]}"/cmdline.txt <<EOF
+root=PARTUUID="${config[ROOT_UUID]}" rw rootwait rootfstype=btrfs console=tty1
 EOF
 
     # create the initramfs
     ## not needed since installing the kernel runs a post install hook to create initramfs
-    #arch-chroot "$ROOT_MNT" mkinitcpio -P
+    #arch-chroot "${config[ROOT_MNT]}" mkinitcpio -P
 
     # First boot identity (idempotent defaults)
       #--root-password-locked \
     systemd-firstboot \
-      --root="${ROOT_MNT}" \
-      --locale="$LOCALE" \
-      --keymap="$KEYMAP" \
-      --timezone="$TZ" \
-      --hostname="$HOSTNAME" \
+      --root="${config[ROOT_MNT]}" \
+      --locale="${config[LOCALE]}" \
+      --keymap="${config[KEYMAP]}" \
+      --timezone="${config[TZ]}" \
+      --hostname="${config[HOSTNAME]}" \
       --setup-machine-id \
       --delete-root-password --force # for boot testing only
 
@@ -274,5 +274,5 @@ EOF
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
-    umount -R "$ROOT_MNT"
+    umount -R "${config[ROOT_MNT]}"
  fi
