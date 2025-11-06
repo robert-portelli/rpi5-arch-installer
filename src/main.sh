@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -u
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly BASE_DIR
 # soothe the linter for the time being:
@@ -16,6 +16,7 @@ main() {
     : "${ROOT_UUID:=$(uuidgen --random)}"
     : "${ESP_MNT:=/mnt/boot}"
     : "${ROOT_MNT:=/mnt}"
+    : "${EMPTY:=require}"
 
     [ -b "$DISK" ] || { echo "ERROR: DISK '$DISK' not found" >&2; exit 1; }
 
@@ -47,7 +48,7 @@ EOF
         --pretty=yes \
         --definitions=/run/repart.d \
         --dry-run=no \
-        --empty=force\
+        --empty="$EMPTY"\
         "$DISK"
 
     partprobe "$DISK"
