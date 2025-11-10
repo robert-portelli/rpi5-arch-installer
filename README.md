@@ -30,7 +30,7 @@ Stages execute in lexical order, allowing new steps to be added easily.
 
 ## Directory Layout
 
-```
+```bash
 rpi5-arch-installer/
 ├── .github
 │   └── workflows
