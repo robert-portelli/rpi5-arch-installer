@@ -12,6 +12,9 @@ declare -gA config=(
     [ESP_MNT]="/mnt/boot"
     [ROOT_MNT]="/mnt"
     [EMPTY]="force"   # force|require|refuse
+    [LOG_LEVEL]="INFO"  # DEBUG|INFO|WARNING|ERROR|QUIET
+    [LOG_COLOR]=auto
+    [LOG_TAG]="${0##*/}"
 )
 
 [[ -b "${config[DISK]}" ]] || { echo "ERROR: DISK ${config[DISK]} not found" >&2; exit 1; }
