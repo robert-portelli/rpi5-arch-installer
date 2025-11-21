@@ -116,7 +116,7 @@ cd rpi5-arch-installer
 sudo ./src/main.bash --disk=/dev/sdb --hostname=rpi5 --tz=UTC
 ```
 
-### Common CLI options:
+### Common CLI options
 ```bash
 --disk PATH        Required. Target block device.
 --hostname NAME    Hostname for installed system.
@@ -130,15 +130,15 @@ sudo ./src/main.bash --disk=/dev/sdb --hostname=rpi5 --tz=UTC
 --log-color MODE   auto|always|never
 ```
 
-### Example dry-run:
+### Example dry-run
 
 ```bash
 ./src/main.bash --disk=/dev/sdb --dry-run
 ```
 
-### Example forced installation (CI automation):
+### Example forced installation (CI automation)
 
-```
+```bash
 ./src/main.bash --disk=/dev/sdb --force
 ```
 
