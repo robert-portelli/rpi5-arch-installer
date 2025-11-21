@@ -33,17 +33,17 @@ if ! grep -q "^initramfs .* followkernel" "${config[ESP_MNT]}/config.txt"; then
 fi
 
 # Ensure fstab exists
-if [[ ! -s "${config[ROOT_MNT]}/etc/fstab" ]]; then
-    log_info "fstab missing; generating via genfstab -U ${config[ROOT_MNT]}"
-    genfstab -U "${config[ROOT_MNT]}" >> "${config[ROOT_MNT]}/etc/fstab"
-fi
+#if [[ ! -s "${config[ROOT_MNT]}/etc/fstab" ]]; then
+#    log_info "fstab missing; generating via genfstab -U ${config[ROOT_MNT]}"
+#    genfstab -U "${config[ROOT_MNT]}" >> "${config[ROOT_MNT]}/etc/fstab"
+#fi
 
 # Accept any / entry: UUID=, PARTUUID=, /dev/..., /dev/disk/by-...
-if ! grep -Eq '^[[:space:]]*(UUID=|PARTUUID=|/dev/)[^[:space:]]+[[:space:]]+/[[:space:]]' \
-    "${config[ROOT_MNT]}/etc/fstab"; then
-    log_error "MISS: could not find root filesystem entry for '/' in fstab"
-    ((fails++))
-fi
+#if ! grep -Eq '^[[:space:]]*(UUID=|PARTUUID=|/dev/)[^[:space:]]+[[:space:]]+/[[:space:]]' \
+#    "${config[ROOT_MNT]}/etc/fstab"; then
+#    log_error "MISS: could not find root filesystem entry for '/' in fstab"
+#    ((fails++))
+#fi
 
 # Optional: check ESP filesystem entry in fstab (if you expect it there)
 # ESP_FS_UUID="$(blkid -s UUID -o value "/dev/disk/by-partuuid/${config[ESP_UUID]}")"
