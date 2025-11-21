@@ -2,12 +2,36 @@
 
 Automated **bare-metal Arch Linux ARM installation** for the **Raspberry Pi 5**
 
+This project provides a reproducible, idempotent workflow to build a *native-boot* Arch Linux ARM installation using only an x86-64 host with QEMU emulation support.
+
 ---
 
 ## Purpose
 
-This project provides a reproducible, idempotent way to provision a bootable Arch Linux ARM system disk for the Raspberry Pi 5.
-It runs entirely from an x86-64 host or Arch Live ISO and performs all steps needed to produce a native-bootable Pi 5 installation: partitioning, formatting, base system bootstrap, kernel and firmware installation, and firmware configuration.
+This installer:
+
+- partitions and formats a target disk (NVMe, SSD, USB)
+- bootstraps Arch Linux ARM (aarch64) using `pacstrap`
+- installs the Raspberry Pi bootloader + kernel (`linux-rpi-16k`)
+- configures firmware (`config.txt`, `cmdline.txt`)
+- enables locale, keymap, timezone, hostname
+- validates all boot assets before exit
+
+The result is a filesystem that boots **directly on a Raspberry Pi 5** with no U-Boot required.
+
+---
+
+## Architecture Overview
+
+The installer is structured as:
+
+- A **configuration module** (`_config.bash`)
+- A **printf-style logger** (`_logger.bash`)
+- A **CLI parser** (`_parser.bash`)
+- A **stage pipeline** under `src/stages/`
+- A **main entrypoint** (`src/main.bash`)
+
+Stages execute in lexical order and are idempotent; you may rerun the installer without damaging an already-processed step.
 
 ---
 
@@ -49,6 +73,7 @@ rpi5-arch-installer/
 ├── src
 │   ├── lib
 │   │   ├── _config.bash
+│   │   ├── _logger.bash
 │   │   └── _parser.bash
 │   ├── main.bash
 │   └── stages
@@ -72,7 +97,9 @@ rpi5-arch-installer/
 - Host OS: Arch Linux x86-64 Live ISO or any distro with
   `qemu-user-static`, `qemu-user-binfmt`, `systemd-repart`, and `pacstrap`
 - Internet access to Arch Linux ARM mirrors
-- Target disk: Device connected to host
+
+Target:
+Any block device (`/dev/sdX`, `/dev/nvme0n1`) that will become the Pi’s boot disk.
 
 ---
 
@@ -82,45 +109,94 @@ rpi5-arch-installer/
 # from an Arch Live ISO
 git clone https://github.com/robert-portelli/rpi5-arch-installer.git
 cd rpi5-arch-installer
-
-# optional overrides
-export DISK=/dev/nvme0n1
-export HOSTNAME=rpi5
-export TZ=UTC
-
-# run all stages
-bash src/installer.sh
 ```
+
+### Run the installer
+```bash
+sudo ./src/main.bash --disk=/dev/sdb --hostname=rpi5 --tz=UTC
+```
+
+### Common CLI options:
+```bash
+--disk PATH        Required. Target block device.
+--hostname NAME    Hostname for installed system.
+--locale LOCALE    Default locale (e.g., en_US.UTF-8)
+--keymap MAP       Console keymap.
+--tz ZONE          Timezone.
+--empty MODE       force|require|refuse
+--dry-run          Parse args and print final config, then exit.
+--force            Skip destructive confirmation.
+--log-level LEVEL  DEBUG|INFO|WARN|ERROR|QUIET
+--log-color MODE   auto|always|never
+```
+
+### Example dry-run:
+
+```bash
+./src/main.bash --disk=/dev/sdb --dry-run
+```
+
+### Example forced installation (CI automation):
+
+```
+./src/main.bash --disk=/dev/sdb --force
+```
+
 ---
 
-## Makefile Targets (planned)
+## Stage Pipeline
 
-| Target | Description |
-|---------|-------------|
-| `make all` | Run full installation pipeline |
-| `make test` | Run Bats tests |
-| `make clean` | Unmount and remove build artifacts |
-| `make lint` | Run shellcheck and formatting checks |
-| `make release` | Prepare release archive and tag |
+|                     Stage | Description                                                         |
+| ------------------------: | ------------------------------------------------------------------- |
+|          **10_partition** | Creates GPT (ESP + root) using `systemd-repart`.                    |
+|              **20_mount** | Mounts ESP and root into `config[ROOT_MNT]`.                        |
+|          **30_host_prep** | Imports ALARM GPG key, sets QEMU binfmt, configures pacman.         |
+| **40_bootstrap_arch_arm** | Bootstraps base ARM system via `pacstrap -C pacman.arm.conf`.       |
+|   **50_rpi5_boot_assets** | Installs kernel, firmware, and writes `config.txt` & `cmdline.txt`. |
+|         **60_first_boot** | Applies locale, timezone, hostname, and system identity.            |
+|          **99_preflight** | Validates boot assets, fstab, PARTUUIDs, and initramfs.             |
+
+All stages are idempotent
 
 ---
+
+## Safety and Validation
+
+Before any destructive action, the parser ensures:
+
+- --disk is provided
+- device is a whole disk, not a partition
+- device is not the current root
+- no partitions of the device are mounted
+- destructive confirmation requires typing "yes" unless --force is used
+
+Example confirmation:
+
+```bash
+About to install onto /dev/sdb
+
+WARNING: This will ERASE ALL DATA on /dev/sdb.
+Type "yes" to continue:
+```
 
 ## Preflight Checklist
 
-After completion the installer reports any missing:
-- Kernel (`Image` or `kernel8.img`)
-- Initramfs (`initramfs-linux.img`)
-- Firmware blobs (`start4.elf`, `fixup4.dat`, `overlays/`)
-- Correct `fstab` entries with `PARTUUID`
-- Proper `config.txt` / `cmdline.txt` configuration
+Installer validates:
 
-All checks passing → system is ready to boot on the Pi 5.
+- Kernel present (Image / kernel8.img)
+- Initramfs present (initramfs-linux.img)
+- Firmware blobs (start4.elf, fixup4.dat, overlays/)
+- Correct cmdline.txt root argument
+- Valid config.txt
+
+All checks passing → disk is ready to boot on the Raspberry Pi 5.
 
 ---
 
 ## Notes
 
 - The target install is **bare-metal** ARM Arch, not a virtual machine.
+- This installer does not use U-Boot — it relies on native Raspberry Pi firmware boot.
 - Host emulation (QEMU aarch64 binfmt) is used only during build.
 - Never mix x86_64 Arch repositories with ARM packages.
 
