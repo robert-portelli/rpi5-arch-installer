@@ -36,6 +36,9 @@ _logger_init() {
         [ERROR]=$'\033[31m'
     )
 
+    # Global reset sequence for colored output
+    declare -g LOGGER_RESET=$'\033[0m'
+
     LOGGER_INITIALIZED=1
 }
 
@@ -54,10 +57,6 @@ _logger_use_color() {
     esac
 }
 
-_logger_reset() {
-    printf '\033[0m'
-}
-
 _logger_log() {
     _logger_init    # lazy-init: first call does all the work
 
@@ -69,21 +68,32 @@ _logger_log() {
         return 0
     fi
 
-    local ts color reset msg tag
+    local ts color reset msg tag fmt
     ts="$(date +'%Y-%m-%dT%H:%M:%S%z')"
     tag="${config[LOG_TAG]}"
 
+    # Treat the next argument as a printf-style format string, rest as args
+    fmt=${1-}
+    shift || true
+
+    if [[ -n $fmt ]]; then
+        # Build the formatted message into msg
+        # shellcheck disable=SC2059  # fmt is intentionally used as a format string
+        printf -v msg "$fmt" "$@"
+    else
+        msg=""
+    fi
+
     if _logger_use_color; then
         color="${LOG_COLORS[$level]}"
-        reset="$(_logger_reset)"
+        reset="$LOGGER_RESET"
     else
         color=''
         reset=''
     fi
 
-    msg="$*"
-
-    if [ -n "$color" ]; then
+    if [[ -n $color ]]; then
+        # color and reset are %b so escape sequences are interpreted
         printf '%s [%s] %s: %b%s%b\n' \
             "$ts" "$level" "$tag" \
             "$color" "$msg" "$reset" >&2
@@ -99,6 +109,6 @@ log_warn()  { _logger_log WARN  "$@"; }
 log_error() { _logger_log ERROR "$@"; }
 
 die() {
-    log_error "$@"
+    _logger_log ERROR "$@"
     exit 1
 }
