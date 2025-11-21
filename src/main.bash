@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-
 set -u
+
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly BASE_DIR
 
@@ -8,10 +8,13 @@ main() {
     # shellcheck source=src/lib/_config.bash
     source  "$BASE_DIR/src/lib/_config.bash"
 
-    # source the parser
-
     # shellcheck source=src/lib/_logger.bash
     source "$BASE_DIR/src/lib/_logger.bash"
+
+    # shellcheck source=src/lib/_parser.bash
+    source "$BASE_DIR/src/lib/_parser.bash"
+
+    parse_arguments "$@"
 
     log_info "Starting installer (BASE_DIR=${BASE_DIR})"
 
@@ -30,9 +33,12 @@ main() {
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    trap 'umount -R "${config[ROOT_MNT]}"' EXIT
-    log_info "Invoked as top-level script, entering main()"
+    trap '
+        umount -R "${config[ROOT_MNT]}" >/dev/null 2>&1 || true
+        log_info "Unmounting target root at ${config[ROOT_MNT]}"
+    ' EXIT
+
     main "$@"
-    log_info "Unmounting target root at ${config[ROOT_MNT]}"
+
     log_info "Installer completed successfully"
 fi
