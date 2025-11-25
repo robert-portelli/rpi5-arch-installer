@@ -1,9 +1,10 @@
 ###
 # In main, _config and _logger are loaded before the _parser. _parser CRUDs the array created by\
 # _config and calls functions made available via _logger.
-#
-# _parser defines three functions,
 
+
+
+# run once before each test case
 function setup {
     load '../lib/_common_setup'
 
@@ -16,7 +17,17 @@ function setup {
     # Load the argument parser
     source src/lib/_parser.bash
 
+    # Load the test device fixture library
+    source test/lib/_device_fixture.bash
+
+    create_test_device
+    register_test_device
     _common_setup
+}
+
+# run once after each test case
+function teardown {
+    cleanup_test_device
 }
 
 @test "smoke test" {
@@ -37,4 +48,9 @@ function setup {
     run parse_arguments -h
     assert_success
     assert_output "$message"
+}
+
+@test "--dry-run" {
+    run parse_arguments --dry-run --force
+    assert_success
 }
