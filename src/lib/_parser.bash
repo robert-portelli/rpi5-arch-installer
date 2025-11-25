@@ -108,7 +108,7 @@ parse_arguments() {
         case $1 in
             --help|-h)
                 _usage_message
-                return 0
+                exit 0
                 ;;
 
             --dry-run)
