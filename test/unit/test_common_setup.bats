@@ -1,8 +1,5 @@
-#!/usr/bin/env bash
-# Filename: test/test_common_setup.bats
-
 function setup {
-    load 'test_helpers/_common_setup'
+    load '../lib/_common_setup'
     _common_setup
 }
 

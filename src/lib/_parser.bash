@@ -108,7 +108,7 @@ parse_arguments() {
         case $1 in
             --help|-h)
                 _usage_message
-                return 0
+                exit 0
                 ;;
 
             --dry-run)
@@ -123,7 +123,7 @@ parse_arguments() {
 
             --log-level|-ll)
                 if [[ $# -lt 2 ]]; then
-                    die 'ERROR: --log-level requires a value'
+                    die "ERROR: %s requires a value" "$1"
                 fi
                 log_level=$(printf '%s' "$2" | tr '[:lower:]' '[:upper:]')
                 if [[ -n $log_level && -n ${LOG_LEVELS[$log_level]+x} ]]; then
@@ -138,19 +138,22 @@ parse_arguments() {
 
             --log-level=*)
                 log_level=$(printf '%s' "${1#*=}" | tr '[:lower:]' '[:upper:]')
-                if [[ -n $log_level && -n ${LOG_LEVELS[$log_level]+x} ]]; then
+                if [[ -z $log_level ]]; then
+                    die "ERROR: %s requires a value" "$1"
+                fi
+                if [[ -n ${LOG_LEVELS[$log_level]+x} ]]; then
                     config[LOG_LEVEL]="$log_level"
                     echo "LOG_LEVEL=${config[LOG_LEVEL]}" >&2  # for integration testing
                     shift
                 else
-                    die 'Invalid log level: %s. Valid options are: DEBUG, INFO, WARN, ERROR, QUIET.' \
+                    die "Invalid log level: %s. Valid options are: DEBUG, INFO, WARN, ERROR, QUIET." \
                         "$log_level"
                 fi
                 ;;
 
             --log-color|-lc)
                 if [[ $# -lt 2 ]]; then
-                    die 'ERROR: --log-color requires a value'
+                    die "ERROR: %s requires a value" "$1"
                 fi
                 log_color=$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')
                 case $log_color in
@@ -160,14 +163,23 @@ parse_arguments() {
                         shift 2
                         ;;
                     *)
-                        die 'ERROR: Invalid value for --log-color: %s. Must be one of auto|always|never.' \
+                        die "ERROR: Invalid value for $1: %s. Must be one of auto|always|never." \
                             "$2"
                         ;;
                 esac
                 ;;
 
             --log-color=*)
+                # option name without "=value"
+                local opt_name="${1%%=*}"
+
+                # value after "=" (normalized to lowercase)
                 log_color=$(printf '%s' "${1#*=}" | tr '[:upper:]' '[:lower:]')
+
+                if [[ -z "$log_color" ]]; then
+                    die "ERROR: %s requires a value" "$opt_name"
+                fi
+
                 case $log_color in
                     auto|always|never)
                         config["LOG_COLOR"]="$log_color"
@@ -175,11 +187,12 @@ parse_arguments() {
                         shift
                         ;;
                     *)
-                        die 'ERROR: Invalid value for --log-color: %s. Must be one of auto|always|never.' \
-                            "${1#*=}"
+                        die "ERROR: Invalid value for %s: %s. Must be one of auto|always|never." \
+                            "$opt_name" "$log_color"
                         ;;
                 esac
                 ;;
+
 
             --disk|-d)
                 if [[ $# -lt 2 ]]; then
