@@ -62,6 +62,8 @@ rpi5-arch-installer/
 │       ├── non-default-branch-protection.yaml
 │       ├── solo-dev-pr-approve.yaml
 │       ├── super-linter.yaml
+│       ├── test_device_fixture.yaml
+│       ├── test_parser.yaml
 │       └── test_test_environment.yaml
 ├── .gitignore
 ├── .pre-commit-config.yaml
@@ -85,9 +87,15 @@ rpi5-arch-installer/
 │       ├── 60_first_boot.bash
 │       └── 99_preflight.bash
 └── test
-    ├── test_common_setup.bats
-    └── test_helpers
-        └── _common_setup.bash
+    ├── lib
+    │   ├── _common_setup.bash
+    │   ├── _device_fixture.bash
+    │   ├── _harness.bash
+    │   └── local_harness.bash
+    └── unit
+        ├── test_common_setup.bats
+        ├── test_device_fixture.bats
+        └── test_parser.bats
 ```
 
 ---
