@@ -62,6 +62,8 @@ rpi5-arch-installer/
 │       ├── non-default-branch-protection.yaml
 │       ├── solo-dev-pr-approve.yaml
 │       ├── super-linter.yaml
+│       ├── test_device_fixture.yaml
+│       ├── test_parser.yaml
 │       └── test_test_environment.yaml
 ├── .gitignore
 ├── .pre-commit-config.yaml
@@ -85,9 +87,15 @@ rpi5-arch-installer/
 │       ├── 60_first_boot.bash
 │       └── 99_preflight.bash
 └── test
-    ├── test_common_setup.bats
-    └── test_helpers
-        └── _common_setup.bash
+    ├── lib
+    │   ├── _common_setup.bash
+    │   ├── _device_fixture.bash
+    │   ├── _harness.bash
+    │   └── local_harness.bash
+    └── unit
+        ├── test_common_setup.bats
+        ├── test_device_fixture.bats
+        └── test_parser.bats
 ```
 
 ---
@@ -199,6 +207,123 @@ All checks passing → disk is ready to boot on the Raspberry Pi 5.
 - This installer does not use U-Boot — it relies on native Raspberry Pi firmware boot.
 - Host emulation (QEMU aarch64 binfmt) is used only during build.
 - Never mix x86_64 Arch repositories with ARM packages.
+
+---
+
+## Testing
+
+This repository provides a robust test framework for both unit and integration tests, supporting local development and CI workflows. Tests are written in [Bats](https://github.com/bats-core/bats-core) and exercise functionality inside containerized environments, optionally using loopback block devices for disk/installer testing.
+
+### Test Types
+
+- **Unit tests:** Located in `test/unit/`
+- **Integration tests:** Located in `test/integration/`
+- **Test library scripts:** In `test/lib/`
+- **Test harness:** `test/lib/_harness.bash`
+
+---
+
+### Local Testing: Using the Harness
+
+To run tests that require a device fixture (e.g., loopback device):
+
+1. **Provision test device and run tests with the harness:**
+
+   ```sh
+   bash test/lib/_harness.bash test_device_fixture.bats
+   ```
+
+   This will:
+   - Source and configure your device and test fixture
+   - Create and register a loopback device (e.g., `/dev/loop0`)
+   - Spawn a test container with the device mapped in and run the specified Bats test
+
+2. **Running arbitrary tests:**
+
+   You may specify any test file (searched recursively below `test/`):
+
+   ```sh
+   bash test/lib/_harness.bash <test_name>.bats
+   ```
+
+   Example for an integration test:
+   ```sh
+   bash test/lib/_harness.bash integration_device_flow.bats
+   ```
+
+3. **Running arbitrary tests directly on your host:**
+
+    ```sh
+    bats test/unit/test_device_fixture.bats
+    ```
+
+---
+
+### Advanced: Local GitHub Actions Workflow with ACT
+
+You can simulate GitHub Actions runs locally using [nektos/act](https://github.com/nektos/act), which lets you verify your workflows and test container interactions in a local Docker environment.
+
+#### **Automated Workflow Harness**
+
+A script `test/local_harness.bash` sets up the loopback device and invokes `act` with the required device mapping and environment variables.
+
+```sh
+# Usage: (from repo root)
+bash test/local_harness.bash job=test-device-fixture
+```
+
+This script will:
+- Source repo config and device fixture scripts
+- Provision and register a loop device and backing file
+- Set `DEVICE` and `EXTERNAL_TEST_DEVICE` environment variables
+- Invoke `gh act` (the GitHub CLI act extension) with:
+  - `--container-options "--device=$DEVICE"`
+  - `--env EXTERNAL_TEST_DEVICE=$DEVICE`
+- Automatically clean up loop and file resources after the run
+
+**Note:** You must have [gh (GitHub CLI)](https://cli.github.com/) and the [gh-act extension](https://github.com/nektos/gh-act) installed.
+
+---
+
+### Continuous Integration
+
+- All tests are also run under GitHub Actions in `.github/workflows/`
+- The CI workflow provisions required packages and runs the harness as above using a prebuilt test image, ensuring that device fixtures and all required system tools are present
+
+---
+
+### General Notes
+
+- Containers are orchestrated with all necessary device and capability flags (e.g., `--device`, `--cap-add=SYS_ADMIN`)
+- The test harness ensures resources (devices, files) are cleaned up via shell traps even on error or interrupt
+- Tests that require a device fixture accept the device via `EXTERNAL_TEST_DEVICE` or create their own if not provided
+- All backing files and loop devices are temporary and cleaned up on exit
+
+---
+
+### Troubleshooting
+
+- If you see errors about `uuidgen` or devices not found, ensure all system dependencies are installed in your test containers and that device creation is permitted (requires privileges).
+- On CI, everything is provisioned automatically; for local testing, make sure you run from the repository root directory.
+
+---
+
+### Useful Commands
+
+```sh
+# Run a single test locally (unit or integration)
+bash test/lib/_harness.bash test_device_fixture.bats
+
+# Run a workflow via ACT with device provisioned
+bash test/local_harness.bash job=test-device-fixture
+
+# (Optional) Clean up leftover loop devices manually:
+sudo losetup -D
+```
+
+---
+
+**See comments in `test/lib/_harness.bash` and `test/local_harness.bash` for detailed developer instructions.**
 
 ---
 
