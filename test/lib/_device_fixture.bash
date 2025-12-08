@@ -4,20 +4,8 @@
 # device will be used for each test. This is out of respect for host resources over test suite
 # execution time.
 
-# Ensure we are running under Bats (BATS_TEST_FILENAME is set)
-if [[ -z "${BATS_TEST_FILENAME:-}" ]]; then
-    printf 'ERROR: _device_fixture.bash must be sourced from a Bats test file (BATS_TEST_FILENAME not set)\n' >&2
-    return 1
-fi
-
-# Require root (loop devices, losetup, etc.)
-if (( EUID != 0 )); then
-    printf 'ERROR: _device_fixture.bash requires root (EUID != 0). Run tests via sudo.\n' >&2
-    return 1
-fi
-
-# the name of the test script sourcing this _device_fixture
-caller_name="$(basename "$BATS_TEST_FILENAME" .bats)"
+caller_name="${BATS_TEST_FILENAME:-device_fixture}"
+caller_name="$(basename "$caller_name" .bats)"
 
 declare -gA _fixture=(
     # what host resource to use for image file backing: memory or disk
@@ -35,6 +23,13 @@ declare -gA _fixture=(
 )
 
 create_test_device() {
+    # If an external device is supplied, just use it
+    if [[ -n "${EXTERNAL_TEST_DEVICE:-}" ]]; then
+        echo "Using external test device: $EXTERNAL_TEST_DEVICE"
+        _fixture[TEST_DEVICE]="$EXTERNAL_TEST_DEVICE"
+        return 0
+    fi
+
     # create / overwrite the backing image file with the desired size
     truncate -s "${_fixture[BACKING_FILE_SIZE_BYTES]}" "${_fixture[BACKING_FILE_PATH]}"
 
@@ -99,11 +94,19 @@ cleanup_test_device() {
         config[DISK]='__none__'
     fi
 
-    # detach loop device
-    if losetup -j "${_fixture[BACKING_FILE_PATH]}" | grep -q "${_fixture[TEST_DEVICE]}"; then
-        echo "Detaching loop device ${_fixture[TEST_DEVICE]}..."
-        losetup -d "${_fixture[TEST_DEVICE]}" || echo "Failed to detach loop device"
+    # If using externally managed device, don't touch loop devices or backing file
+    if [[ -n "${EXTERNAL_TEST_DEVICE:-}" ]]; then
+        echo "External test device in use; skipping losetup detach and image removal."
+        return 0
     fi
+
+    # detach loop device(s) given a backing file
+    local loopdev
+    while read -r loopdev; do
+        [[ -z "$loopdev" ]] && continue
+        printf 'Detaching loop device %s\n' "$loopdev" >&2
+        losetup -d "$loopdev" || printf 'WARN: failed to detach %s\n' "$loopdev" >&2
+    done < <(losetup -j "${_fixture[BACKING_FILE_PATH]}" --output NAME --raw --noheadings)
 
     # remove backing image file
     if [[ -f "${_fixture[BACKING_FILE_PATH]}" ]]; then
