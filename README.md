@@ -251,7 +251,7 @@ To run tests that require a device fixture (e.g., loopback device):
    bash test/lib/_harness.bash integration_device_flow.bats
    ```
 
-3. ** Running arbitrary tests directly on your host:**
+3. **Running arbitrary tests directly on your host:**
 
     ```sh
     bats test/unit/test_device_fixture.bats
