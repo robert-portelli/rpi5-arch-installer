@@ -8,9 +8,9 @@ RUN pacman-key --init && \
     pacman -Syu --noconfirm
 
 RUN pacman -S --noconfirm \
-    act \
     bats-assert bats-file bats-support \
-    nodejs npm
+    nodejs npm \
+    util-linux
 
 WORKDIR /workspace
 
