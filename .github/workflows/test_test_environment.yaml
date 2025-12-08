@@ -1,13 +1,9 @@
 ---
 # Filename: .github/workflows/test_test_environment.yaml
 name: Test Test Environment Workflow
-on:  # yamllint disable-line rule:truthy
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-  workflow_dispatch:  # usage: gh workflow run <workflow_name> --ref <branch_name>
+on:
+  pull_request: {}
+  workflow_dispatch: {}
 jobs:
   setup-test-env-and-test-bats-common-setup:
     runs-on: ubuntu-latest
