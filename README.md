@@ -210,11 +210,6 @@ All checks passing → disk is ready to boot on the Raspberry Pi 5.
 
 ---
 
-Absolutely! Here’s a **comprehensive “Testing” section for your README** that documents your local harness, device setup, GitHub Actions/CI, and running tests under ACT.
-
----
-
-````markdown
 ## Testing
 
 This repository provides a robust test framework for both unit and integration tests, supporting local development and CI workflows. Tests are written in [Bats](https://github.com/bats-core/bats-core) and exercise functionality inside containerized environments, optionally using loopback block devices for disk/installer testing.
@@ -329,7 +324,6 @@ sudo losetup -D
 ---
 
 **See comments in `test/lib/_harness.bash` and `test/local_harness.bash` for detailed developer instructions.**
-````
 
 ---
 
