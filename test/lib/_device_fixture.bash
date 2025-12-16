@@ -114,6 +114,11 @@ cleanup_test_device() {
         rm -f "${_fixture[BACKING_FILE_PATH]}" || echo "Failed to remove image file"
     fi
 
+    sync
+    if command -v udevadm >/dev/null; then
+        udevadm settle || :
+    fi
+
     # verify cleanup
     if losetup -l | grep -q "${_fixture[TEST_DEVICE]}" || [[ -f "${_fixture[BACKING_FILE_PATH]}" ]]; then
         echo "Failed Test Device Cleanup"
