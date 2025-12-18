@@ -27,6 +27,7 @@ test_container() {
     local TEST_PATH="$1"
     docker run --rm \
         --device="${_fixture[TEST_DEVICE]}" \
+        --device-cgroup-rule="b *:* rwm" \
         --cap-add=SYS_ADMIN \
         -v "$PWD:$PWD" -w "$PWD" \
         -e EXTERNAL_TEST_DEVICE="${_fixture[TEST_DEVICE]}" \
