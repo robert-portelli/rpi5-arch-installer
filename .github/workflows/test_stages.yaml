@@ -1,0 +1,13 @@
+---
+name: Test Stages
+on:
+  workflow_dispatch: {}
+  pull_request: {}
+jobs:
+  test-stages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y uuid-runtime
+      - name: run test harness on stage 10 partition format
+        run: sudo -E bash test/lib/_harness.bash test_stage_10_partition_format.bats
