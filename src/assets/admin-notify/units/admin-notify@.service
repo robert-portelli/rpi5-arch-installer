@@ -1,0 +1,6 @@
+[Unit]
+Description=Admin notification for topic %i
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/admin-notify %i /var/lib/admin-notify/%i.txt
