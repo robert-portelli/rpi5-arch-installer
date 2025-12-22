@@ -46,3 +46,10 @@ while IFS= read -r -d '' bin_path; do
 
     log_debug "Installed $bin_name to $target"
 done < <(find "$BASE_DIR/src/assets/pacman/bin" -maxdepth 1 -type f -print0 | sort -z)
+
+log_debug "Enabling the stock pacman-filesdb-refresh.timer"
+if [[ -f "${config[ROOT_MNT]}/usr/lib/systemd/system/pacman-filesdb-refresh.timer" ]]; then
+    arch-chroot "${config[ROOT_MNT]}" systemctl enable pacman-filesdb-refresh.timer
+else
+    log_error "Failed to enable pacman-filesdb-refresh.timer"
+fi
