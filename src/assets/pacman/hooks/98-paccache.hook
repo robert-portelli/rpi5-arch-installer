@@ -1,0 +1,22 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Clean pacman cache
+When = PostTransaction
+Exec = /usr/bin/paccache -rvuk0
+Exec = /usr/bin/paccache -rvk1
+
+# Replace N with the chosen number of versions to keep for installed packages.
+#
+# Example for "keep 3 versions for installed packages, 0 for uninstalled":
+#   Exec = /usr/bin/paccache -rvk3
+#   Exec = /usr/bin/paccache -rvuk0
+#
+# Example for more aggressive "keep 1 version, 0 for uninstalled":
+#   Exec = /usr/bin/paccache -rvk1
+#   Exec = /usr/bin/paccache -rvuk0
