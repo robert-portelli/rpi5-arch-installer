@@ -1,0 +1,6 @@
+[Unit]
+Description=Collect reboot-needed information for admin notification
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/admin-reboot-check-collect

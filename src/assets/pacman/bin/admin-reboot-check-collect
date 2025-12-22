@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+out="/var/lib/admin-notify/reboot.txt"
+mkdir -p "$(dirname "$out")"
+
+need_reboot=0
+messages=()
+
+# Example heuristic 1: kernel mismatch
+installed_kernel="$(ls -1 /usr/lib/modules | sort -V | tail -n 1 || true)"
+running_kernel="$(uname -r)"
+
+if [[ -n "$installed_kernel" && "$installed_kernel" != "$running_kernel" ]]; then
+    need_reboot=1
+    messages+=("Running kernel: $running_kernel; Installed kernel: $installed_kernel")
+fi
+
+# Example heuristic 2: critical packages in last transaction
+critical_pkgs=(linux linux-rpi linux-rpi-16k systemd glibc openssl)
+recent_pkgs="$(paclog-pkglist --last 1 2>/dev/null || true)"
+
+for pkg in "${critical_pkgs[@]}"; do
+    if grep -q "^${pkg}-" <<<"$recent_pkgs"; then
+        need_reboot=1
+        messages+=("Critical package updated: ${pkg}")
+    fi
+done
+
+if (( need_reboot == 0 )); then
+    : >"$out"
+    exit 0
+fi
+
+{
+    echo "A system reboot is recommended."
+    echo
+    printf '%s\n' "${messages[@]}"
+    echo
+    echo "Reboot when convenient to ensure all services run with updated libraries."
+} >"$out"

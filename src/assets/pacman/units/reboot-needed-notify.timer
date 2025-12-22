@@ -1,0 +1,12 @@
+# reboot-needed-notify.timer
+[Unit]
+Description=Periodic reboot-needed check and notification
+
+[Timer]
+OnBootSec=20min
+OnUnitActiveSec=12h
+Persistent=true
+Unit=reboot-needed-notify.target
+
+[Install]
+WantedBy=timers.target
