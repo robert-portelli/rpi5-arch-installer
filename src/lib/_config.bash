@@ -17,5 +17,25 @@ declare -gA config=(
     [LOG_TAG]="${0##*/}"
 )
 
+# ---------------------------------------------------------------------------
+# Static network configuration
+#
+# Adjust these values to match your LAN. They are baked into the image.
+# Example below:
+#   Address:  10.0.0.50/24
+#   Gateway:  10.0.0.1
+#   DNS:      1.1.1.1, 9.9.9.9
+# ---------------------------------------------------------------------------
+config[IPA_TYPE]="DHCP"   #STATIC|DHCP
+config[IFACE]="end0"
+config[IPV4]="10.0.0.50"
+config[NET_PREFIX]="24"
+config[GATEWAY]="10.0.0.1"
+config[DNS1]="1.1.1.1"
+config[DNS2]="9.9.9.9"
+
+# ---------------------------------------------------------------------------
+# Sanity Checks
 [[ -n "${config[ESP_UUID]}" ]] || { echo "ERROR: ESP UUID gen fail" >&2; exit 1; }
 [[ -n "${config[ROOT_UUID]}" ]] || { echo "ERROR: ROOT UUID gen fail" >&2; exit 1; }
+# ---------------------------------------------------------------------------

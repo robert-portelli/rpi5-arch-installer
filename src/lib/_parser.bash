@@ -6,23 +6,31 @@ _usage_message() {
 Usage: ${0##*/} [OPTIONS]
 
 Options:
-  -d, --disk PATH          Target disk (e.g. /dev/sda)
-      --hostname NAME      Hostname (default: ${config[HOSTNAME]})
-      --locale LOCALE      Locale (default: ${config[LOCALE]})
-      --keymap MAP         Console keymap (default: ${config[KEYMAP]})
-      --tz ZONE            Timezone (default: ${config[TZ]})
-      --esp-uuid UUID      ESP partition PARTUUID
-      --root-uuid UUID     Root partition PARTUUID
-      --esp-mnt PATH       ESP mountpoint (default: ${config[ESP_MNT]})
-      --root-mnt PATH      Root mountpoint (default: ${config[ROOT_MNT]})
-      --empty MODE         empty disk policy: force|require|refuse
+    -d, --disk PATH     Target disk (e.g. /dev/sda)
+        --hostname NAME     Hostname (default: ${config[HOSTNAME]})
+        --locale LOCALE     Locale (default: ${config[LOCALE]})
+        --keymap MAP        Console keymap (default: ${config[KEYMAP]})
+        --tz ZONE           Timezone (default: ${config[TZ]})
+        --esp-uuid UUID     ESP partition PARTUUID
+        --root-uuid UUID    Root partition PARTUUID
+        --esp-mnt PATH      ESP mountpoint (default: ${config[ESP_MNT]})
+        --root-mnt PATH     Root mountpoint (default: ${config[ROOT_MNT]})
+        --empty MODE        empty disk policy: force|require|refuse
 
-      --log-level LEVEL    DEBUG|INFO|WARN|ERROR|QUIET
-      --log-color MODE     auto|always|never
+        --ipa-type TYPE     IPv4 assignment: static|dhcp (default: ${config[IPA_TYPE]})
+        --interface IFACE   Network interface (default: ${config[IFACE]})
+        --ipv4 IPA          Static IPv4 address (e.g. 10.0.0.50)(default: ${config[IPV4]})
+        --net-prefix PREF   IPv4 prefix length (e.g. 24)(default: ${config[NET_PREFIX]})
+        --gateway ADDR      Default gateway IPv4 address (e.g. 10.0.0.1)(default: ${config[GATEWAY]})
+        --dns1 ADDR         Primary DNS server IPv4 address (default: ${config[DNS1]})
+        --dns2 ADDR         Secondary DNS server IPv4 address (default: ${config[DNS2]})
 
-      --dry-run            Show config and exit
-      --force              Skip destructive confirmation
-  -h, --help               Show this help message and exit.
+        --log-level LEVEL   DEBUG|INFO|WARN|ERROR|QUIET
+        --log-color MODE    auto|always|never
+
+        --dry-run           Show config and exit
+        --force             Skip destructive confirmation
+    -h, --help              Show this help message and exit.
 
 EOF
 }
@@ -328,6 +336,55 @@ parse_arguments() {
             --empty=*)
                 config[EMPTY]=${1#*=}
                 shift
+                ;;
+
+            --ipa-type)
+                if [[ $# -lt 2 ]]; then
+                    die 'ERROR: --ipa-type requires a value'
+                fi
+                local ipa_type
+                ipa_type=$(printf '%s' "$2" | tr '[:lower:]' '[:upper:]')
+                if [[ -n $ipa_type && $ipa_type =~ ^(DHCP|STATIC)$ ]]; then
+                    config[IPA_TYPE]=$ipa_type
+                else
+                    die "Invalid IPA TYPE: %s. Valid options are: DHCP, STATIC." "$ipa_type"
+                fi
+                ;;
+
+            --interface)
+                if [[ $# -lt 2 ]]; then
+                    die 'ERROR: --interface requires a value'
+                fi
+                ;;
+
+            --ipv4)
+                if [[ $# -lt 2 ]]; then
+                    die 'ERROR: --ipv4 requires a value'
+                fi
+                ;;
+
+            --net-prefix)
+                if [[ $# -lt 2 ]]; then
+                    die 'ERROR: --net-prefix requires a value'
+                fi
+                ;;
+
+            --gateway)
+                if [[ $# -lt 2 ]]; then
+                    die 'ERROR: --gateway requires a value'
+                fi
+                ;;
+
+            --dns1)
+                if [[ $# -lt 2 ]]; then
+                    die 'ERROR: --dns1 requires a value'
+                fi
+                ;;
+
+            --dns2)
+                if [[ $# -lt 2 ]]; then
+                    die 'ERROR: --dns2 requires a value'
+                fi
                 ;;
 
             --)
