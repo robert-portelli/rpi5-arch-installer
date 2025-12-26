@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = List .pacnew and .pacsave files using pacdiff --output (see pacdiff-hook)
+When = PostTransaction
+Exec = /usr/local/sbin/pacdiff-hook

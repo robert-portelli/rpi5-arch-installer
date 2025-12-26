@@ -1,0 +1,15 @@
+[Unit]
+Description=Twice-daily Arch updates check and notification
+
+[Timer]
+# Start 15 minutes after boot
+OnBootSec=15min
+# Then every 12 hours
+OnUnitActiveSec=12h
+Persistent=true
+
+# Tell the timer which unit to start
+Unit=checkupdates-notify.target
+
+[Install]
+WantedBy=timers.target

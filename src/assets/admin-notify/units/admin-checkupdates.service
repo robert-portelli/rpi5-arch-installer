@@ -1,0 +1,6 @@
+[Unit]
+Description=Collect pending package updates summary for admin notifications
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/admin-checkupdates-collect
