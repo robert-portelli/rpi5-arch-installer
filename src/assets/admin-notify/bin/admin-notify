@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+topic="$1"                # e.g., "updates", "diskspace", "reboot", etc.
+payload="$2"              # e.g., /var/lib/admin-notify/updates.txt
+hostname="$(hostname)"
+subject="[admin] ${topic} notification on ${hostname}"
+
+body="$(cat "$payload" 2>/dev/null || true)"
+
+if [[ -z "$body" ]]; then
+    exit 0
+fi
+
+# 1) journald
+logger -t "admin-notify" -- "${topic}: ${body}"
+
+# 2) email
+printf '%s\n\n%s\n' "$subject" "$body" | mail -s "$subject" root
+
+# 3) wall (optional)
+if command -v wall >/dev/null; then
+    {
+        echo "ADMIN NOTICE (${topic}) on ${hostname}:"
+        echo
+        echo "$body"
+    } | wall
+fi

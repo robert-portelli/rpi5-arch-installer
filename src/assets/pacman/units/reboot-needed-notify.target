@@ -1,0 +1,6 @@
+# reboot-needed-notify.target
+[Unit]
+Description=Reboot-needed check and notification stack
+Requires=network-online.target
+After=network-online.target
+Wants=admin-reboot-check.service admin-notify@reboot.service

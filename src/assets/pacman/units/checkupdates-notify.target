@@ -1,0 +1,7 @@
+[Unit]
+Description=Arch updates check and notification stack
+Requires=network-online.target
+After=network-online.target
+
+# When this target is started, run the collector and the notifier
+Wants=admin-checkupdates.service admin-notify@updates.service

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "==> pacdiff hook: scanning for .pacnew/.pacsave files (non-interactive)"
+echo "    (this will only list candidate config files; no files are modified)"
+echo
+
+if ! command -v pacdiff >/dev/null 2>&1; then
+    echo "pacdiff not found (pacman-contrib not installed); skipping scan."
+    exit 0
+fi
+
+pacdiff --output --pacmandb || true
+
+echo
+echo "==> To review and merge these files manually later, you can run:"
+echo "    DIFFPROG=\"nano -d\" pacdiff --pacmandb"
+echo
+echo "    # This will:"
+echo "    #   - use nano in diff mode (-d)"
+echo "    #   - open each pair of files one by one"
+echo "    #   - let you edit/merge, then save/exit as usual (Ctrl+O, Ctrl+X)"

@@ -4,43 +4,54 @@
 log_info "Stage 40: bootstrap Arch Linux ARM into ${config[ROOT_MNT]}"
 
 # install to target (creates a new, empty keyring via -K)
-log_info "Running pacstrap into ${config[ROOT_MNT]} with ARM config /tmp/pacman.arm.conf"
-pacstrap -C /tmp/pacman.arm.conf -GMK "${config[ROOT_MNT]}" base archlinuxarm-keyring \
+log_debug "Running pacstrap into ${config[ROOT_MNT]} with ARM config /tmp/pacman.arm.conf"
+pacstrap -C /tmp/pacman.arm.conf.bootstrap -GMK "${config[ROOT_MNT]}" base archlinuxarm-keyring \
     || die "pacstrap failed for target ${config[ROOT_MNT]}"
 
+# check for the alpm download user
+if arch-chroot "${config[ROOT_MNT]}" bash -c 'id -u alpm >/dev/null 2>&1'; then
+    log_debug "User alpm exists in target"
+else
+    die "DownloadUser=alpm is set but user alpm does not exist in target"
+fi
+
 # sanity check:
-log_info "Verifying target pacman Architecture is aarch64"
+log_debug "Verifying target pacman Architecture is aarch64"
 arch-chroot "${config[ROOT_MNT]}" pacman-conf Architecture | grep -qx aarch64 \
     || die "target pacman.conf Architecture is not aarch64"
 
 # Target: persist config
-log_info "Persisting ALARM mirrorlist and pacman.arm.conf into target"
-install -D -m0644 /etc/pacman.d/arm-mirrorlist "${config[ROOT_MNT]}/etc/pacman.d/arm-mirrorlist"
-install -D -m0644 /tmp/pacman.arm.conf "${config[ROOT_MNT]}/etc/pacman.conf"
+log_debug "Persisting ALARM mirrorlist and pacman.arm.conf into target"
+#install -D -m0644 /etc/pacman.d/arm-mirrorlist "${config[ROOT_MNT]}/etc/pacman.d/arm-mirrorlist"
+install -D -m0644 /tmp/pacman.arm.conf.bootstrap "${config[ROOT_MNT]}/etc/pacman.arm.conf.bootstrap"
 
 # seed the keyring:
-log_info "Initializing and populating pacman keyring inside target"
+log_debug "Initializing and populating pacman keyring inside target"
 arch-chroot "${config[ROOT_MNT]}" pacman-key --init \
     || die "pacman-key --init failed inside target"
 arch-chroot "${config[ROOT_MNT]}" pacman-key --populate archlinuxarm \
     || die "pacman-key --populate archlinuxarm failed inside target"
 
 # sanity checks
-log_info "Re-verifying pacman Architecture and /bin/bash ABI in target"
+log_debug "Re-verifying pacman Architecture and /bin/bash ABI in target"
 arch-chroot "${config[ROOT_MNT]}" pacman-conf Architecture | grep -qx aarch64 \
     || die "ERROR: pacman Architecture != aarch64"
 
 arch-chroot "${config[ROOT_MNT]}" file -Lb /bin/bash | grep -q aarch64 \
     || die "ERROR: /bin/bash is not aarch64"
 
+log_debug "Sanity check: pacman in target can resolve base from default repos"
+arch-chroot "${config[ROOT_MNT]}" bash -c 'pacman --config /etc/pacman.arm.conf.bootstrap -Sp base >/dev/null' \
+    || die "Target pacman could not resolve base package from configured repos"
+
 # avoid creating the initramfs twice, install mkinitcpio and edit conf before kernel install
 # (once via kernel post install hook and once with edited mkinitcpio.conf)
-log_info "Installing mkinitcpio in target"
-arch-chroot "${config[ROOT_MNT]}" pacman -S --quiet --noconfirm mkinitcpio \
+log_debug "Installing mkinitcpio in target"
+arch-chroot "${config[ROOT_MNT]}" pacman --config /etc/pacman.arm.conf.bootstrap -S --quiet --noconfirm mkinitcpio \
     || die "Failed to install mkinitcpio in target"
 
 # save a copy of the original mkinitcpio.conf
-log_info "Checking for mkinitcpio.conf in target and backing up original to ESP"
+log_debug "Checking for mkinitcpio.conf in target and backing up original to ESP"
 if [ ! -f "${config[ROOT_MNT]}/etc/mkinitcpio.conf" ]; then
     die "ERROR: ${config[ROOT_MNT]}/etc lacks mkinitcpio.conf"
 else
@@ -50,7 +61,7 @@ else
 fi
 
 # set a console font
-log_info "Writing vconsole KEYMAP=us into target"
+log_debug "Writing vconsole KEYMAP=us into target"
 echo "KEYMAP=us" > "${config[ROOT_MNT]}/etc/vconsole.conf"
 
 # set the FILES in mkinitcpio.conf
@@ -68,8 +79,8 @@ sed -i 's|^HOOKS=.*|HOOKS=(base udev autodetect modconf block filesystems)|' \
 
 # Target: kernel + firmware
 # Note: Uses the target's pacman
-log_info "Installing kernel, EEPROM tools, firmware, and btrfs-progs into target"
-arch-chroot "${config[ROOT_MNT]}" pacman -S --quiet --noconfirm \
+log_debug "Installing kernel, EEPROM tools, firmware, and btrfs-progs into target"
+arch-chroot "${config[ROOT_MNT]}" pacman --config /etc/pacman.arm.conf.bootstrap -S --quiet --noconfirm \
     linux-rpi-16k rpi5-eeprom firmware-raspberrypi btrfs-progs \
     || die "Failed to install kernel/firmware packages in target"
 
@@ -77,12 +88,12 @@ arch-chroot "${config[ROOT_MNT]}" pacman -S --quiet --noconfirm \
 # or with a non-static interpreter, or with binfmt disabled
 
 # precheck: ensure emulator exists on host
-log_info "Verifying qemu-aarch64-static exists on host"
+log_debug "Verifying qemu-aarch64-static exists on host"
 command -v /usr/bin/qemu-aarch64-static >/dev/null \
     || die "qemu-aarch64-static missing on host"
 
 # probe; if chroot can't exec aarch64, inject emulator
-log_info "Probing aarch64 execution inside chroot"
+log_debug "Probing aarch64 execution inside chroot"
 if ! chroot "${config[ROOT_MNT]}" /usr/bin/uname -m >/dev/null 2>&1; then
     log_warn "Target chroot cannot execute aarch64; copying qemu-aarch64-static into target"
     install -D /usr/bin/qemu-aarch64-static \
