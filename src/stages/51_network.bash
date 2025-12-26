@@ -1,25 +1,7 @@
+#'config' is provided by src/lib/_config.bash sourced in main.bash.
+# shellcheck disable=SC2154
+
 log_info "Stage $(basename "${BASH_SOURCE[0]}") configure target's network"
-
-: "${config[ROOT_MNT]:?config[ROOT_MNT] must be set}"
-: "${config[IPA_TYPE]:?config[IPA_TYPE] must be set}"
-: "${config[IFACE]:?config[IFACE] must be set}"
-
-# Validate static-only fields if needed
-case "${config[IPA_TYPE]}" in
-    STATIC)
-        : "${config[IPV4]:?config[IPV4] must be set for STATIC}"
-        : "${config[NET_PREFIX]:?config[NET_PREFIX] must be set for STATIC}"
-        : "${config[GATEWAY]:?config[GATEWAY] must be set for STATIC}"
-        : "${config[DNS1]:?config[DNS1] must be set for STATIC}"
-        : "${config[DNS2]:?config[DNS2] must be set for STATIC}"
-        ;;
-    DHCP)
-        # nothing extra required
-        ;;
-    *)
-        log_error "Unsupported IPA_TYPE: ${config[IPA_TYPE]}"
-        ;;
-esac
 
 WIRED="${config[ROOT_MNT]}/etc/systemd/network/20-${config[IFACE]}.network"
 

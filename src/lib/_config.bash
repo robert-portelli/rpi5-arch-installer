@@ -26,7 +26,7 @@ declare -gA config=(
 #   Gateway:  10.0.0.1
 #   DNS:      1.1.1.1, 9.9.9.9
 # ---------------------------------------------------------------------------
-config[IPA_TYPE]="dhcp"   #static|dhcp
+config[IPA_TYPE]="DHCP"   #STATIC|DHCP
 config[IFACE]="end0"
 config[IPV4]="10.0.0.50"
 config[NET_PREFIX]="24"
