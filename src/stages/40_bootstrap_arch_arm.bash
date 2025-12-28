@@ -5,7 +5,11 @@ log_info "Stage 40: bootstrap Arch Linux ARM into ${config[ROOT_MNT]}"
 
 # install to target (creates a new, empty keyring via -K)
 log_debug "Running pacstrap into ${config[ROOT_MNT]} with ARM config /tmp/pacman.arm.conf"
-pacstrap -C /tmp/pacman.arm.conf.bootstrap -GMK "${config[ROOT_MNT]}" base archlinuxarm-keyring \
+pacstrap -C /tmp/pacman.arm.conf.bootstrap -GMK "${config[ROOT_MNT]}" \
+    base \
+    archlinuxarm-keyring \
+    iptables-nft \
+    nftables \
     || die "pacstrap failed for target ${config[ROOT_MNT]}"
 
 # check for the alpm download user
@@ -20,10 +24,42 @@ log_debug "Verifying target pacman Architecture is aarch64"
 arch-chroot "${config[ROOT_MNT]}" pacman-conf Architecture | grep -qx aarch64 \
     || die "target pacman.conf Architecture is not aarch64"
 
-# Target: persist config
-log_debug "Persisting ALARM mirrorlist and pacman.arm.conf into target"
-#install -D -m0644 /etc/pacman.d/arm-mirrorlist "${config[ROOT_MNT]}/etc/pacman.d/arm-mirrorlist"
+# pacman mirrorlist
+log_debug "Backing up stock target mirrorlist (one-time snapshot)"
+if [[ -e "${config[ROOT_MNT]}/etc/pacman.d/mirrorlist.orig" ]]; then
+    log_debug "Target /etc/pacman.d/mirrorlist.orig already exists; skipping backup"
+else
+    cp -a -- "${config[ROOT_MNT]}/etc/pacman.d/mirrorlist" "${config[ROOT_MNT]}/etc/pacman.d/mirrorlist.orig" \
+        || log_error "Failed to back up target pacman mirror list"
+fi
+
+log_debug "Clobbering the target's mirrorlist with the host's ALARM mirrorlist"
+install -D -m0644 /etc/pacman.d/mirrorlist "${config[ROOT_MNT]}/etc/pacman.d/mirrorlist"
+
+
+# pacman config
 install -D -m0644 /tmp/pacman.arm.conf.bootstrap "${config[ROOT_MNT]}/etc/pacman.arm.conf.bootstrap"
+log_debug "Backing up stock target /etc/pacman.conf (one-time snapshot)"
+if [[ -e "${config[ROOT_MNT]}/etc/pacman.conf.orig" ]]; then
+    log_debug "Target /etc/pacman.conf.orig already exists; skipping backup"
+else
+    cp -a -- "${config[ROOT_MNT]}/etc/pacman.conf" "${config[ROOT_MNT]}/etc/pacman.conf.orig" \
+        || log_error "Failed to back up target pacman.conf"
+fi
+
+log_debug "Enabling pacman Color in target"
+sed -i 's/^[[:space:]]*#\?[[:space:]]*Color[[:space:]]*$/Color/' \
+    "${config[ROOT_MNT]}/etc/pacman.conf"
+
+log_debug "Setting pacman ParallelDownloads=8 in target"
+if grep -qE '^[[:space:]]*#?[[:space:]]*ParallelDownloads[[:space:]]*=' \
+    "${config[ROOT_MNT]}/etc/pacman.conf"; then
+    sed -i 's/^[[:space:]]*#\?[[:space:]]*ParallelDownloads[[:space:]]*=.*/ParallelDownloads = 8/' \
+        "${config[ROOT_MNT]}/etc/pacman.conf"
+else
+    printf '\nParallelDownloads = 8\n' >> "${config[ROOT_MNT]}/etc/pacman.conf"
+fi
+
 
 # seed the keyring:
 log_debug "Initializing and populating pacman keyring inside target"
