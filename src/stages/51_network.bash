@@ -26,7 +26,7 @@ Address=${config[IPV4]}/${config[NET_PREFIX]}
 Gateway=${config[GATEWAY]}
 DNS=${config[DNS1]}
 DNS=${config[DNS2]}
-IPv6AcceptRA=no
+IPv6AcceptRA=yes
 EOF
 }
 

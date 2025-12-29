@@ -1,0 +1,17 @@
+# NOTE: This unit does not wait for network-online.target because it only
+# establishes baseline firewall policy and does not inspect runtime network state.
+
+[Unit]
+Description=Setup UFW firewall policy on first boot
+DefaultDependencies=no
+After=systemd-sysctl.service
+Before=sysinit.target
+# Do not run if we've already completed successfully.
+ConditionPathExists=!/var/lib/ufw-firstboot/done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash /usr/local/lib/ufw/ufw-firstboot.bash
+
+[Install]
+WantedBy=sysinit.target
