@@ -327,10 +327,22 @@ parse_arguments() {
 
             --empty)
                 if [[ $# -lt 2 ]]; then
-                    die 'ERROR: --empty requires a value'
+                    die "ERROR: %s requires a value" "$1"
                 fi
-                config[EMPTY]="$2"
-                shift 2
+                local empty
+                empty=$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')
+                case $empty in
+                    force|require|refuse)
+                        #shellcheck disable=SC2153
+                        config[EMPTY]="$empty"
+                        log_debug "config[EMPTY] set to $empty"
+                        shift 2
+                        ;;
+                    *)
+                        die "ERROR: Invalid value for $1: %s. Must be one of force|require|refuse." \
+                            "$2"
+                        ;;
+                esac
                 ;;
 
             --empty=*)
@@ -340,51 +352,68 @@ parse_arguments() {
 
             --ipa-type)
                 if [[ $# -lt 2 ]]; then
-                    die 'ERROR: --ipa-type requires a value'
+                    die 'ERROR: %s requires a value' "$1"
                 fi
                 local ipa_type
                 ipa_type=$(printf '%s' "$2" | tr '[:lower:]' '[:upper:]')
-                if [[ -n $ipa_type && $ipa_type =~ ^(DHCP|STATIC)$ ]]; then
-                    config[IPA_TYPE]=$ipa_type
-                else
-                    die "Invalid IPA TYPE: %s. Valid options are: DHCP, STATIC." "$ipa_type"
-                fi
+                case $ipa_type in
+                    DHCP|STATIC)
+                        config[IPA_TYPE]="$ipa_type"
+                        log_debug "config[IPA_TYPE] set to $ipa_type"
+                        shift 2
+                        ;;
+                    *)
+                        die "ERROR: Invalid value for $1: %s. Must be one of DHCP, STATIC" "$2"
+                        ;;
+                esac
                 ;;
 
             --interface)
                 if [[ $# -lt 2 ]]; then
-                    die 'ERROR: --interface requires a value'
+                    die "ERROR: $1 requires a value"
                 fi
+                config[IFACE]="$2"
+                shift 2
                 ;;
 
             --ipv4)
                 if [[ $# -lt 2 ]]; then
-                    die 'ERROR: --ipv4 requires a value'
+                    die "ERROR: $1 requires a value"
                 fi
+                config[IPV4]="$2"
+                shift 2
                 ;;
 
             --net-prefix)
                 if [[ $# -lt 2 ]]; then
-                    die 'ERROR: --net-prefix requires a value'
+                    die "ERROR: $1 requires a value"
                 fi
+                config[NET_PREFIX]="$2"
+                shift 2
                 ;;
 
             --gateway)
                 if [[ $# -lt 2 ]]; then
-                    die 'ERROR: --gateway requires a value'
+                    die "ERROR: $1 requires a value"
                 fi
+                config[GATEWAY]="$2"
+                shift 2
                 ;;
 
             --dns1)
                 if [[ $# -lt 2 ]]; then
-                    die 'ERROR: --dns1 requires a value'
+                    die "ERROR: $1 requires a value"
                 fi
+                config[DNS1]="$2"
+                shift 2
                 ;;
 
             --dns2)
                 if [[ $# -lt 2 ]]; then
-                    die 'ERROR: --dns2 requires a value'
+                    die "ERROR: $1 requires a value"
                 fi
+                config[DNS2]="$2"
+                shift 2
                 ;;
 
             --)
