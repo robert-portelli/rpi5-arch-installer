@@ -246,3 +246,129 @@ function teardown {
     assert_success
     assert_output -p HOSTNAME=bats-test
 }
+
+@test "--empty" {
+    run parse_arguments --dry-run --force --empty
+    assert_failure
+    assert_output -p "ERROR: --empty requires a value"
+
+    run parse_arguments --dry-run --force --empty invalid
+    assert_failure
+    assert_output -p "ERROR: Invalid value for --empty: invalid"
+
+    run parse_arguments --dry-run --force --empty force
+    assert_success
+    assert_output -p EMPTY=force
+
+    run parse_arguments --dry-run --force --empty FORCE
+    assert_success
+    assert_output -p EMPTY=force
+
+    run parse_arguments --dry-run --force --empty refuse
+    assert_success
+    assert_output -p EMPTY=refuse
+
+    run parse_arguments --dry-run --force --empty ReFUse
+    assert_success
+    assert_output -p EMPTY=refuse
+
+    run parse_arguments --dry-run --force --empty require
+    assert_success
+    assert_output -p EMPTY=require
+
+    run parse_arguments --dry-run --force --empty REQuire
+    assert_success
+    assert_output -p EMPTY=require
+}
+@test "--ipa-type" {
+    run parse_arguments --dry-run --force --ipa-type
+    assert_failure
+    assert_output -p "ERROR: --ipa-type requires a value"
+
+    run parse_arguments --dry-run --force --ipa-type invalid
+    assert_failure
+    assert_output -p "ERROR: Invalid value for --ipa-type"
+    run parse_arguments --dry-run --force --ipa-type static
+    assert_success
+
+    run parse_arguments --dry-run --force --ipa-type dhcp
+    assert_success
+    assert_output -p "IPA_TYPE=DHCP"
+
+    run parse_arguments --dry-run --force --ipa-type DhCp
+    assert_success
+    assert_output -p "IPA_TYPE=DHCP"
+
+    run parse_arguments --dry-run --force --ipa-type static
+    assert_success
+    assert_output -p "IPA_TYPE=STATIC"
+
+    run parse_arguments --dry-run --force --ipa-type StaTIC
+    assert_success
+    assert_output -p "IPA_TYPE=STATIC"
+}
+
+@test "--interface" {
+    run parse_arguments --dry-run --force --interface
+    assert_failure
+    assert_output -p "ERROR: --interface requires a value"
+
+    run parse_arguments --dry-run --force --interface eth0
+    assert_success
+    assert_output -p "IFACE=eth0"
+}
+
+@test "--ipv4" {
+    run parse_arguments --dry-run --force --ipv4
+    assert_failure
+    assert_output -p "ERROR: --ipv4 requires a value"
+    run parse_arguments --dry-run --force --ipv4 10.0.0.127
+    assert_success
+    assert_output -p "IPV4=10.0.0.127"
+}
+
+@test "--net-prefix" {
+    run parse_arguments --dry-run --force --net-prefix
+    assert_failure
+    assert_output -p "ERROR: --net-prefix requires a value"
+
+    run parse_arguments --dry-run --force --net-prefix 96
+    assert_success
+    assert_output -p "NET_PREFIX=96"
+}
+
+@test "--gateway" {
+    run parse_arguments --dry-run --force --gateway
+    assert_failure
+    assert_output -p "ERROR: --gateway requires a value"
+
+    run parse_arguments --dry-run --force --gateway 10.0.0.111
+    assert_success
+    assert_output -p "GATEWAY=10.0.0.111"
+}
+
+@test "--dns1" {
+    run parse_arguments --dry-run --force --dns1
+    assert_failure
+    assert_output -p "ERROR: --dns1 requires a value"
+
+    run parse_arguments --dry-run --force --dns1 1.2.3.4
+    assert_success
+    assert_output -p "DNS1=1.2.3.4"
+}
+
+@test "--dns2" {
+    run parse_arguments --dry-run --force --dns2
+    assert_failure
+    assert_output -p "ERROR: --dns2 requires a value"
+
+    run parse_arguments --dry-run --force --dns2 4.3.2.1
+    assert_success
+    assert_output -p "DNS2=4.3.2.1"
+}
+
+@test "unsupported flag" {
+    run parse_arguments --dry-run --force --invalid
+    assert_failure
+    assert_output -p "ERROR: unknown option: --invalid"
+}
