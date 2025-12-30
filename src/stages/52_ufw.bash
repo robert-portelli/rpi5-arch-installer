@@ -23,12 +23,12 @@ arch-chroot "${config[ROOT_MNT]}" systemctl enable ufw.service \
 log_debug "Installing first-boot firewall finalization unit"
 
 install -D -m0644 \
-    "${BASE_DIR}/src/assets/systemd/ufw-firstboot.service" \
+    "${BASE_DIR}/src/assets/ufw/ufw-firstboot.service" \
     "${config[ROOT_MNT]}/etc/systemd/system/ufw-firstboot.service" \
     || die "Failed to install ufw-firstboot.service"
 
 install -D -m0755 \
-    "${BASE_DIR}/src/assets/systemd/ufw-firstboot.bash" \
+    "${BASE_DIR}/src/assets/ufw/ufw-firstboot.bash" \
     "${config[ROOT_MNT]}/usr/local/lib/ufw/ufw-firstboot.bash" \
     || die "Failed to install ufw-firstboot.bash"
 
