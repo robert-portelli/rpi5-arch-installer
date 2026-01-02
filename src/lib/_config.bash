@@ -39,3 +39,8 @@ config[DNS2]="9.9.9.9"
 [[ -n "${config[ESP_UUID]}" ]] || { echo "ERROR: ESP UUID gen fail" >&2; exit 1; }
 [[ -n "${config[ROOT_UUID]}" ]] || { echo "ERROR: ROOT UUID gen fail" >&2; exit 1; }
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# ZRAM swap via zram-generator (Optional)
+# ---------------------------------------------------------------------------
+config[ZRAM_SWAP_ENABLE]=1          # 1|0
