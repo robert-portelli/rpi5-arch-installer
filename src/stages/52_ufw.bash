@@ -24,7 +24,7 @@ log_debug "Installing first-boot firewall finalization unit"
 
 install -D -m0644 \
     "${BASE_DIR}/src/assets/ufw/ufw-firstboot.service" \
-    "${config[ROOT_MNT]}/etc/systemd/system/ufw-firstboot.service" \
+    "${config[ROOT_MNT]}/usr/lib/systemd/system/ufw-firstboot.service" \
     || die "Failed to install ufw-firstboot.service"
 
 install -D -m0755 \
@@ -32,6 +32,6 @@ install -D -m0755 \
     "${config[ROOT_MNT]}/usr/local/lib/ufw/ufw-firstboot.bash" \
     || die "Failed to install ufw-firstboot.bash"
 
-systemctl --root "${config[ROOT_MNT]}" enable ufw-firstboot.service
+systemctl --root="${config[ROOT_MNT]}" enable ufw-firstboot.service
 
 log_info "Stage 52: firewall setup complete (finalization deferred to first boot)"
