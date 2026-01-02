@@ -117,7 +117,7 @@ sed -i 's|^HOOKS=.*|HOOKS=(base udev autodetect modconf block filesystems)|' \
 # Note: Uses the target's pacman
 log_debug "Installing kernel, EEPROM tools, firmware, and btrfs-progs into target"
 arch-chroot "${config[ROOT_MNT]}" pacman --config /etc/pacman.arm.conf.bootstrap -S --quiet --noconfirm \
-    linux-rpi-16k rpi5-eeprom firmware-raspberrypi btrfs-progs \
+    linux-rpi-16k rpi5-eeprom firmware-raspberrypi btrfs-progs util-linux\
     || die "Failed to install kernel/firmware packages in target"
 
 # --- Copy the emulator into target for chroot if host registered qemu without F,
